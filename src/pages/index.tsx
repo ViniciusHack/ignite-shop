@@ -14,7 +14,7 @@ interface HomeProps {
     id: string;
     name: string;
     imageUrl: string;
-    price: number;
+    price: string;
   }[]
 }
 
@@ -26,6 +26,7 @@ export default function Home({ products }: HomeProps) {
     }
   })
 
+  // We can use a prefetch={false} in the Link component
   return (
     <HomeContainer ref={sliderRef} className="keen-slider">
       {products.map(product => (

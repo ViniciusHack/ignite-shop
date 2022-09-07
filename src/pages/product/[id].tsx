@@ -1,25 +1,73 @@
+import { GetStaticPaths, GetStaticProps } from "next";
+import Image from "next/future/image";
+import Stripe from "stripe";
+import { stripe } from "../../lib/stripe";
 import { ImageContainer, ProductContainer, ProductDetails } from "../../styles/pages/product";
 
+interface ProductProps {
+  product: {
+    id: string;
+    name: string;
+    imageUrl: string;
+    price: string;
+    description: string;
+  }
+}
 
-export default function Product() {
+export default function Product({ product }: ProductProps) {
 
   return (
-    (
-      <ProductContainer>
-        <ImageContainer>
+    <ProductContainer>
+      <ImageContainer>
+        <Image src={product.imageUrl} width={520} height={480} alt=""/>
+      </ImageContainer>
+      <ProductDetails>
+        <h1>{product.name}</h1>
+        <span>{product.price}</span>
 
-        </ImageContainer>
-        <ProductDetails>
-          <h1>Camiseta X</h1>
-          <span>R$ 79,90</span>
-
-          <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Corporis voluptatum ipsam incidunt expedita sed veniam vel veritatis magnam soluta. Aspernatur, inventore. Nesciunt veniam necessitatibus excepturi eum, explicabo non sed? Dolorem.</p>
-        
-          <button>
-            Comprar agora
-          </button>
-        </ProductDetails>
-      </ProductContainer>
-    )
+        <p>{product.description}</p>
+      
+        <button>
+          Comprar agora
+        </button>
+      </ProductDetails>
+    </ProductContainer>
   )
+}
+
+export const getStaticPaths: GetStaticPaths = () => {
+  return {
+    fallback: 'blocking',
+    paths: [
+      { params: { id: "prod_MOF7AmlYz066Ca"}}
+    ]
+  }
+}
+
+export const getStaticProps: GetStaticProps<any, { id: string }> = async ({ params }) => {
+  const productId = params!.id;
+
+  const product = await stripe.products.retrieve(productId, {
+    expand: ['default_price']
+  });
+
+  const price = product.default_price as Stripe.Price;
+
+  const { id, name, images, description } = product;
+
+  return {
+    props: {
+      product: {
+        id,
+        name,
+        imageUrl: images[0],
+        price: new Intl.NumberFormat('pt-BR', {
+          style: 'currency',
+          currency: 'BRL'
+        }).format(price.unit_amount! / 100),
+        description
+      }
+    },
+    revalidate: 60 * 60 * 1 // 1 hour
+  }
 }
