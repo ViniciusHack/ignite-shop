@@ -1,5 +1,7 @@
+import axios from "axios";
 import { GetStaticPaths, GetStaticProps } from "next";
 import Image from "next/future/image";
+import { useState } from "react";
 import Stripe from "stripe";
 import { stripe } from "../../lib/stripe";
 import { ImageContainer, ProductContainer, ProductDetails } from "../../styles/pages/product";
@@ -11,10 +13,30 @@ interface ProductProps {
     imageUrl: string;
     price: string;
     description: string;
+    defaultPriceId: string;
   }
 }
 
 export default function Product({ product }: ProductProps) {
+  const [isCreatingCheckoutSession, setIsCreatingCheckoutSession] = useState(false);
+
+  async function handleBuyProduct() {
+    try {
+      setIsCreatingCheckoutSession(true);
+
+      const response = await axios.post("/api/checkout", {
+        priceId: product.defaultPriceId
+      });
+      
+      const { checkoutUrl } = response.data;
+
+      window.location.href = checkoutUrl
+    } catch (err) {
+      console.log({err})
+      setIsCreatingCheckoutSession(false);
+      alert("Falha ao redirecionar ao checkout!")
+    }
+  }
 
   return (
     <ProductContainer>
@@ -27,7 +49,7 @@ export default function Product({ product }: ProductProps) {
 
         <p>{product.description}</p>
       
-        <button>
+        <button disabled={isCreatingCheckoutSession} onClick={handleBuyProduct}>
           Comprar agora
         </button>
       </ProductDetails>
@@ -65,7 +87,8 @@ export const getStaticProps: GetStaticProps<any, { id: string }> = async ({ para
           style: 'currency',
           currency: 'BRL'
         }).format(price.unit_amount! / 100),
-        description
+        description,
+        defaultPriceId: price.id
       }
     },
     revalidate: 60 * 60 * 1 // 1 hour
